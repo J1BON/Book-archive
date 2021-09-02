@@ -1,43 +1,95 @@
-const findBook = () => {
-    const searchBook = document.getElementById('search-food');
-    const searchText = searchBook.value;
-    // Error handle
-    if (searchText === "") {
-        document.getElementById('error').innerText = "Search field cannot be empty.";
-        return;
+// all required element
+const searchInput = document.getElementById("search_input");
+const resultsDiv = document.getElementById("results");
+const resultsCount = document.getElementById("results_count");
+const topResults = document.getElementById("top_results");
+const loader = document.getElementById("loader");
+
+//showing result 
+const showResultCount = (number, searchText) => {
+    resultsCount.innerText = `About ${number} results found for keyword " ${searchText} "`;
+};
+
+// Call the loadResult
+document.getElementById("search_input").addEventListener("keyup", (event) => {
+    if (event.key === "Enter") {
+        loadResults();
     }
-    // Clear
-    document.getElementById('error').innerText = "";
-    searchBook.value = '';
-    // fetch url
-    const url = ` https://openlibrary.org/search.json?q=${searchText}`;
-    // console.log(url);
-    fetch(url)
-        .then(res => res.json())
-        .then(data => searchResult(data.docs));
-}
+});
 
-const searchResult = books => {
-    // const totalResult = document.getElementById('search-results').innerText = `About ${data.numFound} results `;
-    // console.log(totalResult);
-    const searchResult = document.getElementById('search-result');
-    searchResult.innerText = ''
-    books.forEach(book => {
-        // console.log(book);
-        const div = document.createElement('div');
-        div.classList.add('col');
+// load results
+const loadResults = async () => {
+    const searchText = searchInput.value;
+
+    // empty value set
+    resultsDiv.textContent = "";
+    resultsCount.textContent = "";
+    searchInput.value = "";
+
+    topResults.style.display = "none";
+    loader.style.display = "block";
+
+    // alert show when searchText is empty
+    if (searchText == "") {
+        loader.style.display = "none";
+        alert("You have to write something to search!");
+    } else {
+        try {
+            const url = `https://openlibrary.org/search.json?q=${searchText}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            const resultFound = data?.numFound;
+            showResultCount(resultFound, searchText);
+            showResults(data?.docs);
+        } catch (error) {
+            alert("Something went wrong!");
+        }
+    }
+};
+
+//Display results
+const showResults = (data) => {
+    if (data?.length == 0) {
+        alert("No search Result !!");
+    }
+
+    topResults.innerText = `Showing top ${data?.length} results`;
+
+    data?.forEach((item) => {
+        const bookName = item?.title;
+        const authors = item?.author_name?.toString();
+
+        const firstPublish = item?.first_publish_year;
+        const publisher = item?.publisher?.[0];
+        const imgUrl = `https://covers.openlibrary.org/b/id/${item?.cover_i}-M.jpg`;
+
+        const div = document.createElement("div");
+        div.className = "col";
         div.innerHTML = `
-           <div class="card">
-                <img src="https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg" class="card-img-top vh-100">
-                <div class="card-body">
-                     <h4 class="card-title">${book.title}</h4>
-                     <p> Author: <small> ${book.author_name}</small> </p>
-                     <p> Publisher: <small> ${book.publisher[0]}</small> </p>
-                     <p>First Published Year: <small> ${book.first_publish_year}</small> </p>
-                </div>
+        <div class="card border-0 shadow-lg" style="height:100%;">
+            ${item?.cover_i
+                ? `<img src=${imgUrl} class="h-75 w-100 mx-auto" alt="...">`
+                : ""
+            }
+            <div class="card-body">
+                <h5 class="card-title fw-bolder">${bookName ? bookName : ""
+            }</h5>
+                <p class="card-text"> ${authors ? `<b>Author</b> :  ${authors}` : ""
+            } </p>
+                <p class="card-text"> ${firstPublish
+                ? `<b>First Published </b> :  ${firstPublish} `
+                : ""
+            }</p>
+                <p class="card-text">${publisher
+                ? `<b>Publisher</b> : ${publisher} `
+                : ""
+            }</p>
             </div>
+      </div>
         `;
-        searchResult.appendChild(div);
-    })
-
-}
+        resultsDiv.appendChild(div);
+    });
+    //hide loader
+    loader.style.display = "none";
+    topResults.style.display = "block";
+};
